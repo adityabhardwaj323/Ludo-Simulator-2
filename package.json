@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:wasm": "build_wasm.bat",
     "lint": "oxlint",
     "preview": "vite preview"
   },

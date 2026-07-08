@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createInitialState, getMovableTokens, calculateNextState, PLAYERS } from './gameLogic';
+import { createInitialState, getMovableTokens, calculateNextState, PLAYERS, syncWasmState } from './gameLogicWasm';
 import LudoBoard from './LudoBoard';
 import GameControls from './GameControls';
 import { Trophy } from 'lucide-react';
@@ -28,6 +28,7 @@ export default function App() {
     const initialState = createInitialState(playerConfig);
     initialState.advancedRules = advancedRules;
     setGameState(initialState);
+    syncWasmState(initialState);
     setSetupVisible(false);
   };
 
