@@ -1,0 +1,13 @@
+# Render.com deployment configuration
+# Docs: https://render.com/docs/static-sites
+
+services:
+  - type: web
+    name: ludo-simulator
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, s-maxage=86400
