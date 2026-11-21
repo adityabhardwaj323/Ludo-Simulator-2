@@ -1,16 +1,40 @@
-# React + Vite
+# Ludo Simulator 2
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A browser based Ludo project built with React. Its game logic is written in C++ and compiled to WebAssembly with Emscripten, with a JavaScript bridge connecting the module to the web app.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```text
+React interface <--> JavaScript bridge <--> WebAssembly module
+                                            (C++ game logic)
+```
 
-## React Compiler
+The integration details are in [C_INTEGRATION.md](C_INTEGRATION.md).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run locally
 
-## Expanding the Oxlint configuration
+Requirements: Node.js and npm.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+npm install
+npm run dev
+```
+
+Vite prints the local development URL in the terminal.
+
+## Build and lint
+
+```bash
+npm run build
+npm run lint
+```
+
+To rebuild the WebAssembly module on Windows, use `npm run build:wasm`. This invokes the repository's `build_wasm.bat` helper and requires Emscripten. See [C_INTEGRATION.md](C_INTEGRATION.md) for the integration notes.
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the repository's deployment configuration and instructions.
+
+## Technology
+
+React, Vite, C++, Emscripten, and WebAssembly.
