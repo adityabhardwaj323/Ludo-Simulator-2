@@ -37,7 +37,7 @@ export default function App() {
     
     setGameState(prev => ({ ...prev, isRolling: true }));
     
-    // Simulate roll animation delay
+    // Simulate roll animation delay (extended slightly for smooth 3D tumble)
     rollTimeoutRef.current = setTimeout(() => {
       const value = Math.floor(Math.random() * 6) + 1;
       
