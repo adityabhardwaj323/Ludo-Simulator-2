@@ -1,6 +1,10 @@
 # 🎲 Aura Ludo Pro Simulator
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-ludo--simulator--2.vercel.app-brightgreen?style=for-the-badge&logo=vercel)](https://ludo-simulator-2.vercel.app/)
+
 A modern, immersive, browser-based Ludo game simulator engineered with **React 19**, **Vite**, and high-performance **WebAssembly (C++)** game logic with a pure JavaScript fallback. Features a 3D physical animated dice, step-by-step box hopping animations, native Web Audio API sound effects, and customizable match setups.
+
+🌐 **Play Online**: [https://ludo-simulator-2.vercel.app/](https://ludo-simulator-2.vercel.app/)
 
 ---
 
