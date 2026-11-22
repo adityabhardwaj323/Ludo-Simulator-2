@@ -22,7 +22,7 @@ export default function App() {
   });
 
   const rollTimeoutRef = useRef(null);
-  const botMoveTimeoutRef = useRef(null);
+  const autoMoveTimeoutRef = useRef(null);
 
   const startGame = () => {
     const initialState = createInitialState(playerConfig);
@@ -53,10 +53,6 @@ export default function App() {
           next.currentPlayer = (next.currentPlayer + 1) % 4;
           next.logs = [...next.logs, `${PLAYERS[next.currentPlayer].name}'s turn.`];
           setHighlightedTokens([]);
-        } else if (movable.length === 1 && prev.playerTypes[prev.currentPlayer] === 'human') {
-          // Auto move if only 1 option for human
-           // Actually, let's let them click for better interactivity, just highlight
-           setHighlightedTokens(movable.map(t => t.id));
         } else {
           setHighlightedTokens(movable.map(t => t.id));
         }
@@ -74,6 +70,23 @@ export default function App() {
     setHighlightedTokens([]);
   };
 
+  // Auto-move for Human if only 1 movable token is available
+  useEffect(() => {
+    if (!gameState || gameState.winner !== null) return;
+
+    const currentPlayerType = gameState.playerTypes[gameState.currentPlayer];
+    if (currentPlayerType === 'human' && gameState.diceRolled && highlightedTokens.length === 1) {
+      // Auto move after a brief natural delay so user sees the dice roll
+      autoMoveTimeoutRef.current = setTimeout(() => {
+        handleTokenClick(highlightedTokens[0]);
+      }, 600);
+    }
+
+    return () => {
+      clearTimeout(autoMoveTimeoutRef.current);
+    };
+  }, [gameState, highlightedTokens]);
+
   // Bot Logic
   useEffect(() => {
     if (!gameState || gameState.winner !== null) return;
@@ -82,12 +95,12 @@ export default function App() {
     
     if (currentPlayerType === 'bot') {
       if (!gameState.diceRolled && !gameState.isRolling) {
-        botMoveTimeoutRef.current = setTimeout(() => {
+        autoMoveTimeoutRef.current = setTimeout(() => {
           handleRollDice();
         }, 1000);
       } else if (gameState.diceRolled && highlightedTokens.length > 0) {
         // Bot logic to choose a token
-        botMoveTimeoutRef.current = setTimeout(() => {
+        autoMoveTimeoutRef.current = setTimeout(() => {
           // Simple strategy: prefer tokens that are already on board, then prefer tokens closest to home
           const movableTokens = gameState.tokens.filter(t => highlightedTokens.includes(t.id));
           
@@ -106,12 +119,12 @@ export default function App() {
           }
 
           handleTokenClick(chosen.id);
-        }, 1500);
+        }, 1200);
       }
     }
 
     return () => {
-      clearTimeout(botMoveTimeoutRef.current);
+      clearTimeout(autoMoveTimeoutRef.current);
     };
   }, [gameState, highlightedTokens]);
 
