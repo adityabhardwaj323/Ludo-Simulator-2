@@ -1,14 +1,9 @@
 import React from 'react';
 import { BOARD_SIZE, PLAYERS, SAFE_SQUARES, getBoardPosition, FINISH_STEPS } from './gameLogic';
+import { Star } from 'lucide-react';
 
 export default function LudoBoard({ gameState, onTokenClick, highlightedTokens }) {
-  // Generate a grid map for standard 52 cell track positions to CSS grid coords
-  // This is a simplified visual representation. A real Ludo board is a cross.
-  // We'll map the 52 cells around the perimeter and home paths inward.
-  // 15x15 grid.
-  
-  // Actually, a simpler way for the React implementation since we use CSS Grid 15x15:
-  // We manually define coordinates for the track.
+  // Track coordinate mapping (15x15 grid)
   const trackCoords = [
     // Red Start to Top Right
     {r: 7, c: 2}, {r: 7, c: 3}, {r: 7, c: 4}, {r: 7, c: 5}, {r: 7, c: 6}, // 0-4
@@ -35,75 +30,70 @@ export default function LudoBoard({ gameState, onTokenClick, highlightedTokens }
     3: [{r: 14, c: 8}, {r: 13, c: 8}, {r: 12, c: 8}, {r: 11, c: 8}, {r: 10, c: 8}] // Yellow
   };
 
-  const getCellPositionStyle = (token) => {
+  // Group tokens on the board by their grid coordinate for clean stacking
+  const groupedTokens = {};
+  gameState.tokens.forEach(token => {
+    if (token.steps === -1) return; // In home yard
+
     const pos = getBoardPosition(token.player, token.steps);
-    
-    if (pos.type === 'home') {
-       // Just position relative to its home area, which is handled by CSS flex/grid inside home-area
-       return {};
-    }
-    
+    let key = '';
+    let coords = null;
+
     if (pos.type === 'finish') {
-      return { 
-        gridRow: 8, gridColumn: 8, 
-        transform: 'scale(0.5)',
-        margin: 'auto'
-      };
-    }
-    
-    let coords;
-    if (pos.type === 'track') {
+      key = 'finish';
+      coords = { r: 8, c: 8 };
+    } else if (pos.type === 'track') {
+      key = `track-${pos.position}`;
       coords = trackCoords[pos.position];
     } else if (pos.type === 'homePath') {
-      // position is 1 to 5 (steps - 52)
+      key = `hp-${pos.player}-${pos.position}`;
       coords = homePaths[pos.player][pos.position - 1];
     }
 
-    if (!coords) return { display: 'none' };
+    if (coords) {
+      if (!groupedTokens[key]) {
+        groupedTokens[key] = { coords, tokens: [] };
+      }
+      groupedTokens[key].tokens.push(token);
+    }
+  });
 
-    // To handle multiple tokens on the same cell, we could add offsets, but simple stacking is fine for now
-    return {
-      gridRow: coords.r,
-      gridColumn: coords.c,
-      margin: 'auto'
-    };
-  };
-
-  // Pre-calculate cells to render
+  // Pre-calculate track cells
   const cells = [];
   for (let i = 0; i < BOARD_SIZE; i++) {
     const coords = trackCoords[i];
+    const isSafe = SAFE_SQUARES.has(i);
     let className = "cell";
-    if (SAFE_SQUARES.has(i)) className += " safe";
+    if (isSafe) className += " safe";
     
     // Color start cells
-    if (i === 0) className += " cell-0";
-    if (i === 13) className += " cell-1";
-    if (i === 26) className += " cell-2";
-    if (i === 39) className += " cell-3";
+    if (i === 0) className += " cell-start-0";
+    if (i === 13) className += " cell-start-1";
+    if (i === 26) className += " cell-start-2";
+    if (i === 39) className += " cell-start-3";
 
     if (coords) {
       cells.push(
         <div key={`track-${i}`} className={className} style={{ gridRow: coords.r, gridColumn: coords.c }}>
-          {/* {i} */}
+          {isSafe && <Star className="safe-star-icon" size={12} fill="#fbbf24" stroke="#d97706" />}
         </div>
       );
     }
   }
 
-  // Home paths
+  // Home paths cells
   for (let p = 0; p < 4; p++) {
     for (let i = 0; i < 5; i++) {
       const coords = homePaths[p][i];
       cells.push(
-        <div key={`hp-${p}-${i}`} className={`cell cell-${p}`} style={{ gridRow: coords.r, gridColumn: coords.c }}>
+        <div key={`hp-${p}-${i}`} className={`cell cell-home-path cell-hp-${p}`} style={{ gridRow: coords.r, gridColumn: coords.c }}>
+          <span className="home-path-pip" />
         </div>
       );
     }
   }
 
-  // Separate tokens into home and board for rendering
-  const boardTokens = gameState.tokens.filter(t => t.steps !== -1);
+  // Separate home tokens per player
   const homeTokens = { 0: [], 1: [], 2: [], 3: [] };
   gameState.tokens.forEach(t => {
     if (t.steps === -1) homeTokens[t.player].push(t);
@@ -115,40 +105,76 @@ export default function LudoBoard({ gameState, onTokenClick, highlightedTokens }
         {/* Render Track Cells */}
         {cells}
 
-        {/* Home Areas */}
-        {[0, 1, 2, 3].map(p => (
-          <div key={`home-area-${p}`} className={`home-area home-area-${p}`}>
-             {homeTokens[p].map((t, idx) => {
-               const isHighlighted = highlightedTokens.includes(t.id);
-               return (
-                 <div key={`home-spot-${p}-${idx}`} className="home-spot">
-                   <div 
-                     className={`token token-${t.player} ${isHighlighted ? 'highlight' : ''}`}
-                     onClick={() => isHighlighted && onTokenClick(t.id)}
-                     title={`Token ${t.tokenId}`}
-                   />
-                 </div>
-               );
-             })}
-          </div>
-        ))}
-
-        {/* Center Area */}
-        <div className="center-area" style={{ gridColumn: '7/10', gridRow: '7/10' }}></div>
-
-        {/* Render Tokens on Board */}
-        {boardTokens.map(t => {
-          const style = getCellPositionStyle(t);
-          const isHighlighted = highlightedTokens.includes(t.id);
-          
+        {/* 4 Corner Home Yards with Active Player Glow */}
+        {[0, 1, 2, 3].map(p => {
+          const isActive = gameState.currentPlayer === p;
           return (
-             <div 
-               key={`board-token-${t.id}`}
-               className={`token token-${t.player} ${isHighlighted ? 'highlight' : ''}`}
-               style={style}
-               onClick={() => isHighlighted && onTokenClick(t.id)}
-               title={`Player ${PLAYERS[t.player].name} Token ${t.tokenId}`}
-             />
+            <div 
+              key={`home-area-${p}`} 
+              className={`home-area home-area-${p} ${isActive ? 'active-turn-yard' : ''}`}
+            >
+              <div className="home-yard-inner">
+                {homeTokens[p].map((t) => {
+                  const isHighlighted = highlightedTokens.includes(t.id);
+                  return (
+                    <div key={`home-spot-${t.id}`} className="home-spot">
+                      <div 
+                        className={`token token-${t.player} ${isHighlighted ? 'highlight' : ''}`}
+                        onClick={() => isHighlighted && onTokenClick(t.id)}
+                        title={`${PLAYERS[t.player].name} Token (Click to bring out on 6)`}
+                      >
+                        <span className="token-inner-dot" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Center Triangular Finish Area */}
+        <div className="center-area" style={{ gridColumn: '7/10', gridRow: '7/10' }}>
+          <div className="center-triangles">
+            <div className="tri tri-red" />
+            <div className="tri tri-blue" />
+            <div className="tri tri-green" />
+            <div className="tri tri-yellow" />
+          </div>
+          <div className="center-crown">👑</div>
+        </div>
+
+        {/* Render Clustered & Stacked Tokens on Board */}
+        {Object.entries(groupedTokens).map(([key, group]) => {
+          const count = group.tokens.length;
+          const { r, c } = group.coords;
+
+          return (
+            <div 
+              key={`cell-tokens-${key}`} 
+              className={`token-cell-cluster count-${count}`}
+              style={{ gridRow: r, gridColumn: c }}
+            >
+              {group.tokens.map((t, idx) => {
+                const isHighlighted = highlightedTokens.includes(t.id);
+                return (
+                  <div
+                    key={`board-token-${t.id}`}
+                    className={`token token-${t.player} ${isHighlighted ? 'highlight' : ''} ${count > 1 ? 'stacked-token' : ''}`}
+                    onClick={() => isHighlighted && onTokenClick(t.id)}
+                    title={`${PLAYERS[t.player].name} Token`}
+                    style={{
+                      zIndex: isHighlighted ? 25 : 10 + idx,
+                    }}
+                  >
+                    <span className="token-inner-dot" />
+                  </div>
+                );
+              })}
+              {count > 1 && (
+                <span className="cluster-badge">×{count}</span>
+              )}
+            </div>
           );
         })}
 
