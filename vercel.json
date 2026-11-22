@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd Ludo-simulator- && npm install && npm run build",
+  "outputDirectory": "Ludo-simulator-/dist",
+  "framework": "vite"
+}
