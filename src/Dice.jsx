@@ -17,11 +17,12 @@ export default function Dice({ value, isRolling, onClick, disabled }) {
       case 4: return 'rotateX(0deg) rotateY(90deg)';
       case 5: return 'rotateX(90deg) rotateY(0deg)';
       case 6: return 'rotateX(180deg) rotateY(0deg)';
-      default: return 'rotateX(-25deg) rotateY(35deg)'; // Default angled isometric look when waiting
+      default: return 'rotateX(0deg) rotateY(0deg)'; // Keep last face or default flat facing front
     }
   };
 
-  const currentRotation = isRolling ? undefined : getFaceRotation(value);
+  // If value is set, use value rotation. If no value yet, display face 1 flat front
+  const currentRotation = isRolling ? undefined : getFaceRotation(value || 1);
 
   return (
     <div 

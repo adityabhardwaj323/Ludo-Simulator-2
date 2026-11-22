@@ -26,6 +26,9 @@ export default function App() {
     killToEnterHome: false
   });
 
+  const [lastDiceValue, setLastDiceValue] = useState(1);
+  const [isMovingToken, setIsMovingToken] = useState(false);
+
   const rollTimeoutRef = useRef(null);
   const autoMoveTimeoutRef = useRef(null);
 
@@ -61,7 +64,7 @@ export default function App() {
   };
 
   const handleRollDice = () => {
-    if (gameState.diceRolled || gameState.winner !== null || gameState.isRolling) return;
+    if (gameState.diceRolled || gameState.winner !== null || gameState.isRolling || isMovingToken) return;
     
     setGameState(prev => ({ ...prev, isRolling: true }));
     sounds.playDiceRoll();
@@ -70,6 +73,7 @@ export default function App() {
 
     rollTimeoutRef.current = setTimeout(() => {
       const value = Math.floor(Math.random() * 6) + 1;
+      setLastDiceValue(value);
       
       setGameState(prev => {
         const next = { ...prev, diceValue: value, diceRolled: true, isRolling: false };
@@ -93,30 +97,62 @@ export default function App() {
   };
 
   const handleTokenClick = (tokenId) => {
-    if (!highlightedTokens.includes(tokenId) || gameState.winner !== null) return;
-    
-    const prevKills = gameState.kills[gameState.currentPlayer];
-    const nextState = calculateNextState(gameState, tokenId);
-    
-    // Check if a capture happened
-    if (nextState.kills[nextState.currentPlayer] > prevKills || nextState.logs[nextState.logs.length - 1]?.includes('captured')) {
-      sounds.playCapture();
-    } else {
-      sounds.playTokenMove();
-    }
+    if (!highlightedTokens.includes(tokenId) || gameState.winner !== null || isMovingToken) return;
 
-    // Check winner
-    if (nextState.winner !== null) {
-      sounds.playVictory();
-    }
-
-    setGameState(nextState);
     setHighlightedTokens([]);
+    setIsMovingToken(true);
+
+    const targetToken = gameState.tokens.find(t => t.id === tokenId);
+    const diceValue = gameState.diceValue;
+
+    // Determine how many step hops this move takes
+    const totalHops = (targetToken.steps === -1) ? 1 : diceValue;
+    const stepDuration = getSpeedDelay(170);
+
+    let hop = 0;
+    const interval = setInterval(() => {
+      hop++;
+      sounds.playTokenMove();
+
+      setGameState(prev => {
+        const nextTokens = prev.tokens.map(t => {
+          if (t.id === tokenId) {
+            return {
+              ...t,
+              steps: t.steps === -1 ? 0 : t.steps + 1
+            };
+          }
+          return t;
+        });
+        return { ...prev, tokens: nextTokens };
+      });
+
+      if (hop >= totalHops) {
+        clearInterval(interval);
+
+        setTimeout(() => {
+          // Finalize state: captures, finish checks, extra turn, next player
+          const prevKills = gameState.kills[gameState.currentPlayer];
+          const nextState = calculateNextState(gameState, tokenId);
+
+          if (nextState.kills[nextState.currentPlayer] > prevKills || nextState.logs[nextState.logs.length - 1]?.includes('captured')) {
+            sounds.playCapture();
+          }
+
+          if (nextState.winner !== null) {
+            sounds.playVictory();
+          }
+
+          setGameState(nextState);
+          setIsMovingToken(false);
+        }, Math.max(50, Math.floor(stepDuration * 0.8)));
+      }
+    }, stepDuration);
   };
 
   // Auto-move for Human if only 1 movable token is available
   useEffect(() => {
-    if (!gameState || gameState.winner !== null) return;
+    if (!gameState || gameState.winner !== null || isMovingToken) return;
 
     const currentPlayerType = gameState.playerTypes[gameState.currentPlayer];
     if (currentPlayerType === 'human' && gameState.diceRolled && highlightedTokens.length === 1) {
@@ -129,11 +165,11 @@ export default function App() {
     return () => {
       clearTimeout(autoMoveTimeoutRef.current);
     };
-  }, [gameState, highlightedTokens, gameSpeed]);
+  }, [gameState, highlightedTokens, gameSpeed, isMovingToken]);
 
   // Bot Logic
   useEffect(() => {
-    if (!gameState || gameState.winner !== null) return;
+    if (!gameState || gameState.winner !== null || isMovingToken) return;
 
     const currentPlayerType = gameState.playerTypes[gameState.currentPlayer];
     
@@ -166,7 +202,7 @@ export default function App() {
     return () => {
       clearTimeout(autoMoveTimeoutRef.current);
     };
-  }, [gameState, highlightedTokens, gameSpeed]);
+  }, [gameState, highlightedTokens, gameSpeed, isMovingToken]);
 
   return (
     <div className="app-container-outer">
@@ -301,6 +337,7 @@ export default function App() {
             <GameControls 
               gameState={gameState} 
               onRollDice={handleRollDice}
+              lastDiceValue={lastDiceValue}
             />
           </>
         )}

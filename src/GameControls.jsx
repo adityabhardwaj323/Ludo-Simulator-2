@@ -3,10 +3,11 @@ import { PLAYERS } from './gameLogic';
 import { User, Cpu } from 'lucide-react';
 import Dice from './Dice';
 
-export default function GameControls({ gameState, onRollDice }) {
+export default function GameControls({ gameState, onRollDice, lastDiceValue }) {
   const currentPlayer = PLAYERS[gameState.currentPlayer];
   const isHuman = gameState.playerTypes[gameState.currentPlayer] === 'human';
   const canClickRoll = !gameState.diceRolled && isHuman && !gameState.isRolling;
+  const activeDiceValue = gameState.diceValue || lastDiceValue || 1;
 
   return (
     <div className="controls-container">
@@ -20,7 +21,7 @@ export default function GameControls({ gameState, onRollDice }) {
         {/* 3D Modern Dice Component */}
         <div className="dice-container-outer">
           <Dice 
-            value={gameState.diceValue} 
+            value={activeDiceValue} 
             isRolling={gameState.isRolling}
             onClick={canClickRoll ? onRollDice : undefined}
             disabled={!canClickRoll}
